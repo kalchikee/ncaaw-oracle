@@ -177,7 +177,7 @@ export async function fetchTeamDetails(teamId: string, season = '2025-26'): Prom
 
     const record = (t.record as Record<string, unknown>)?.items as Record<string, unknown>[];
     const overallRecord = record?.find((r: Record<string, unknown>) => r.type === 'total');
-    const stats = (t.statistics as Record<string, unknown>)?.splits?.categories as Record<string, unknown>[];
+    const stats = ((t.statistics as Record<string, unknown>)?.splits as Record<string, unknown>)?.categories as Record<string, unknown>[];
 
     const getStatValue = (cats: Record<string, unknown>[] | undefined, catName: string, statName: string): number => {
       const cat = cats?.find((c: Record<string, unknown>) => c.name === catName);
