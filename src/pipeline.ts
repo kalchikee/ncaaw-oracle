@@ -17,6 +17,7 @@ import {
   sendDailyPredictionsEmbed, sendWeeklyRecapEmbed,
   sendSeasonSummaryEmbed, sendPreseasonEmbed,
 } from './discord/embedBuilder.js';
+import { writePredictionsFile } from './kalshi/predictionsFile.js';
 import type { WBBGame, Prediction, PipelineOptions, FeatureVector } from './types.js';
 
 const MODEL_VERSION = '4.1.0';
@@ -111,6 +112,14 @@ export async function runPipeline(options: PipelineOptions = {}): Promise<Predic
   }
 
   logger.info({ processed: predictions.length, total: games.length }, 'Pipeline complete');
+
+  // ── Write predictions JSON for kalshi-safety ────────────────────────────────
+  try {
+    const outPath = writePredictionsFile(gameDate, predictions);
+    logger.info({ outPath, count: predictions.length }, 'Wrote kalshi-safety predictions JSON');
+  } catch (err) {
+    logger.warn({ err }, 'Failed to write predictions JSON (continuing)');
+  }
 
   // ── Print to console ────────────────────────────────────────────────────────
   if (options.verbose !== false) {
