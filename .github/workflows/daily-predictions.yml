@@ -1,0 +1,66 @@
+# NCAAW Oracle v4.1 — Daily Predictions Workflow
+# Runs every day at 9 AM ET (1300 UTC) during the WBB season (Nov–Apr)
+# Fetches schedule, runs pipeline, sends Discord embed
+
+name: Daily Predictions
+
+on:
+  schedule:
+    - cron: '0 13 * * *'   # 9 AM ET daily
+  workflow_dispatch:        # allow manual trigger
+
+jobs:
+  predict:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Restore SQLite database artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: oracle-db
+          path: data/
+        continue-on-error: true   # OK if no prior artifact (first run)
+
+      - name: Check season gate
+        id: season_check
+        run: |
+          MONTH=$(date +%-m)
+          # Active season: November (11) through April (4)
+          if [ "$MONTH" -ge 11 ] || [ "$MONTH" -le 4 ]; then
+            echo "active=true" >> $GITHUB_OUTPUT
+            echo "Season is active (month $MONTH)"
+          else
+            echo "active=false" >> $GITHUB_OUTPUT
+            echo "Season is dormant (month $MONTH) — skipping"
+          fi
+
+      - name: Run prediction pipeline
+        if: steps.season_check.outputs.active == 'true'
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          DB_PATH: ./data/oracle.sqlite
+          NODE_ENV: production
+        run: npm start -- --alert morning
+
+      - name: Upload SQLite database artifact
+        if: steps.season_check.outputs.active == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-db
+          path: data/oracle.sqlite
+          retention-days: 90
+          overwrite: true

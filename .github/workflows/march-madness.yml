@@ -1,0 +1,107 @@
+# NCAAW Oracle v4.1 — March Madness Workflow
+# Selection Monday: sends bracket simulation embed (10,000 sims, 68 teams)
+# NCAA Tournament (daily): runs enhanced predictions for tourney games
+
+name: March Madness
+
+on:
+  schedule:
+    # Run daily in March–April for tournament coverage
+    - cron: '0 14 * * *'   # 10 AM ET daily
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Mode: bracket | daily_tourney'
+        required: false
+        default: 'bracket'
+
+jobs:
+  march-madness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Restore SQLite database
+        uses: actions/download-artifact@v4
+        with:
+          name: oracle-db
+          path: data/
+        continue-on-error: true
+
+      - name: Check if tournament is active
+        id: tourney_check
+        run: |
+          MONTH=$(date +%-m)
+          DAY=$(date +%-d)
+          YEAR=$(date +%Y)
+
+          # NCAA Women's Tournament: mid-March through early April
+          if [ "$MONTH" -eq 3 ] && [ "$DAY" -ge 15 ]; then
+            echo "active=true" >> $GITHUB_OUTPUT
+            echo "Tournament active"
+          elif [ "$MONTH" -eq 4 ] && [ "$DAY" -le 10 ]; then
+            echo "active=true" >> $GITHUB_OUTPUT
+            echo "Tournament active"
+          else
+            echo "active=false" >> $GITHUB_OUTPUT
+            echo "Not in tournament window — skipping"
+          fi
+
+      - name: Determine run mode
+        id: mode
+        if: steps.tourney_check.outputs.active == 'true'
+        run: |
+          # Selection Monday: ~March 16-18 depending on year
+          # Run bracket sim on Selection Monday
+          DOW=$(date +%u)  # 1=Mon
+          DAY=$(date +%-d)
+          MONTH=$(date +%-m)
+          MODE="${{ github.event.inputs.mode || 'auto' }}"
+
+          if [ "$MODE" == "bracket" ]; then
+            echo "mode=bracket" >> $GITHUB_OUTPUT
+          elif [ "$MODE" == "auto" ] && [ "$DOW" -eq 1 ] && [ "$MONTH" -eq 3 ] && [ "$DAY" -ge 15 ] && [ "$DAY" -le 22 ]; then
+            echo "mode=bracket" >> $GITHUB_OUTPUT
+            echo "Selection Monday detected — running bracket sim"
+          else
+            echo "mode=daily" >> $GITHUB_OUTPUT
+            echo "Daily tournament predictions mode"
+          fi
+
+      - name: Run bracket simulation
+        if: steps.tourney_check.outputs.active == 'true' && steps.mode.outputs.mode == 'bracket'
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DB_PATH: ./data/oracle.sqlite
+          NODE_ENV: production
+        run: npm start -- --alert bracket
+
+      - name: Run daily tournament predictions
+        if: steps.tourney_check.outputs.active == 'true' && steps.mode.outputs.mode == 'daily'
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          DB_PATH: ./data/oracle.sqlite
+          NODE_ENV: production
+        run: npm start -- --alert morning
+
+      - name: Upload database artifact
+        if: steps.tourney_check.outputs.active == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-db
+          path: data/oracle.sqlite
+          retention-days: 90
+          overwrite: true

@@ -1,0 +1,77 @@
+# NCAAW Oracle v4.1 — Preseason Setup Workflow
+# Runs in October: loads prior-year data, trains model, initializes DB
+# Sends "online" embed to Discord
+# Can also be triggered manually via workflow_dispatch
+
+name: Preseason Setup
+
+on:
+  schedule:
+    - cron: '0 14 1 10 *'   # October 1st at 10 AM ET
+  workflow_dispatch:
+
+jobs:
+  preseason:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60   # training can take a while
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Install Python dependencies
+        run: pip install scikit-learn numpy requests
+
+      - name: Fetch historical WBB data (2019–2025)
+        run: python python/fetch_historical.py --seasons 2019 2025
+        continue-on-error: true   # don't fail if some seasons unavailable
+
+      - name: Train ML model
+        run: python python/train_model.py
+        continue-on-error: true   # fall back to Elo+AdjEM if training fails
+
+      - name: Initialize database
+        env:
+          DB_PATH: ./data/oracle.sqlite
+          NODE_ENV: production
+        run: npm start -- --alert preseason
+
+      - name: Send preseason "online" Discord embed
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DB_PATH: ./data/oracle.sqlite
+          NODE_ENV: production
+        run: npm start -- --alert preseason
+
+      - name: Upload database and model artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-db
+          path: data/oracle.sqlite
+          retention-days: 180
+          overwrite: true
+
+      - name: Upload model artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-model
+          path: |
+            model/model_weights.json
+            model/calibration_map.json
+          retention-days: 365
+          overwrite: true

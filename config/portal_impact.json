@@ -1,0 +1,19 @@
+{
+  "_comment": "Portal WAR estimates for 2025-26 season. Positive = gained talent, Negative = lost talent.",
+  "_units": "AdjEM equivalent points gained/lost from portal activity",
+  "_update": "Update each preseason as portal window closes (May–August)",
+  "2579": 2.1,
+  "26": 1.8,
+  "41": 0.8,
+  "99": 2.4,
+  "2294": -4.2,
+  "251": 1.6,
+  "87": 0.9,
+  "24": 0.7,
+  "2633": 1.1,
+  "201": 0.8,
+  "_nil_retention_notes": {
+    "note": "Programs with strong NIL retain draft-eligible stars. Track these signals pre-season.",
+    "examples": ["LSU strong NIL → retained key players", "Iowa NIL unclear post-Clark era"]
+  }
+}

@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+cache/
+data/*.sqlite
+data/*.json
+logs/
+*.log
+__pycache__/
+*.pyc
+.DS_Store

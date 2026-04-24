@@ -1,0 +1,65 @@
+{
+  "season": "2025-26",
+  "dates": {
+    "preseason_start": "2025-10-01",
+    "early_season_start": "2025-11-01",
+    "conference_play_start": "2026-01-01",
+    "conf_tournaments_start": "2026-03-04",
+    "ncaa_selection_monday": "2026-03-16",
+    "ncaa_championship": "2026-04-05",
+    "season_end": "2026-04-07"
+  },
+  "home_court_advantage": {
+    "power_conference_default": 3.5,
+    "mid_major_default": 3.0,
+    "neutral_site": 0.0,
+    "ncaa_tournament_home_proximity": 1.0,
+    "overrides": {
+      "SC": 4.5,
+      "IOWA": 4.5,
+      "LSU": 4.2,
+      "TENN": 4.0,
+      "UCONN": 3.8,
+      "UCLA": 3.5,
+      "STAN": 3.5
+    }
+  },
+  "wbb_league_averages": {
+    "note": "Women's D-I averages — DO NOT use men's averages",
+    "efg_pct": 0.450,
+    "tov_pct": 0.210,
+    "orb_pct": 0.310,
+    "ft_rate": 0.300,
+    "three_pt_pct": 0.310,
+    "two_pt_pct": 0.460,
+    "block_pct": 0.100,
+    "steal_pct": 0.120,
+    "avg_ppg": 62.0,
+    "avg_tempo": 66.0,
+    "avg_adj_oe": 93.5,
+    "avg_adj_de": 93.5,
+    "score_std": 11.0
+  },
+  "confidence_tiers": {
+    "coin_flip": { "min": 0.50, "max": 0.58, "target_accuracy": 0.54 },
+    "moderate": { "min": 0.58, "max": 0.65, "target_accuracy": 0.62 },
+    "strong": { "min": 0.65, "max": 0.74, "target_accuracy": 0.72 },
+    "high_conviction": { "min": 0.74, "max": 0.80, "target_accuracy": 0.80 },
+    "extreme": { "min": 0.80, "max": 1.00, "target_accuracy": 0.83 }
+  },
+  "edge_tiers": {
+    "agreement": { "min": 0.0, "max": 0.04 },
+    "small": { "min": 0.04, "max": 0.08 },
+    "meaningful": { "min": 0.08, "max": 0.12, "discord_emoji": "💡" },
+    "large": { "min": 0.12, "max": 1.00, "discord_emoji": "🚀" }
+  },
+  "power_conferences": ["SEC", "ACC", "Big 12", "Big Ten", "Pac-12", "Big East"],
+  "tournament": {
+    "teams": 68,
+    "first_four_games": 4,
+    "regions": ["Albany", "Portland", "Bridgeport", "Spokane"],
+    "rounds": ["R68", "R64", "R32", "S16", "E8", "F4", "Champ"],
+    "selection_day": "Monday",
+    "note": "Women's tournament expanded to 68 teams in 2022. Selection Monday, NOT Sunday."
+  }
+}

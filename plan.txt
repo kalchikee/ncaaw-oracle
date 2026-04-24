@@ -1,0 +1,497 @@
+NCAAW ORACLE
+NCAA WOMEN’S BASKETBALL
+MACHINE LEARNING PREDICTION ENGINE
+Full Project Plan for Claude Code — v4.1
+GitHub Actions hosted · Discord embedded alerts · Seasonal auto-scheduling
+Custom adjusted efficiency · Prior-year bootstrap · Star player dominance modeling
+Target: 72–76% all games | 78–82% at 74%+ | 82–85% at 80%+
+Detail
+Value
+Version
+4.1 (revised for GitHub Actions + Discord embeds + seasonal scheduling)
+Date
+April 8, 2026
+Platform
+GitHub Actions (scheduled workflows) + Discord webhooks (embedded messages)
+Runtime
+Node.js / TypeScript + Python (scikit-learn for calibration)
+Architecture
+Feature Vector → Logistic Regression → Monte Carlo → Platt Scaling → Edge Detection
+Scope
+Division I Women’s Basketball — 364 teams, ~5,500 games/season
+Hosting
+GitHub repository with Actions cron jobs — zero-cost hosting
+Season Lifecycle
+Auto-starts early November → auto-stops after NCAA Championship (early April)
+Early Season
+First 5 games per team use prior-year efficiency as primary features
+Key Difference
+Women’s-specific efficiency calibration, star player dominance model, WNBA draft impact, less efficient betting market = larger edges
+Build Time
+Phase 1: 5–6 hrs | Phase 2: 3 hrs | Phase 3: 5–6 hrs | Phase 4: 4–5 hrs
+DEPLOYMENT MODEL: GITHUB ACTIONS + DISCORD EMBEDS
+The entire system runs as scheduled GitHub Actions workflows — no dedicated server, no cloud bill. Cron-triggered workflows execute the prediction pipeline on GitHub’s free runners, then send rich embedded messages to Discord via webhooks. Season lifecycle auto-activates in November and goes dormant after the NCAA Championship in April.
+WOMEN’S BASKETBALL: UNIQUE MODELING CONSIDERATIONS
+WBB differs from men’s in key ways: (1) Greater talent concentration at top programs = more predictable extremes and higher baseline accuracy. (2) Lower scoring (~60–65 PPG vs ~70–75 men’s) and different Four Factors calibration (lower eFG%, higher TOV%, higher ORB%). (3) Star players have outsized individual impact. (4) Less efficient betting markets = more frequent and larger model edges. (5) Less publicly available advanced analytics (no KenPom equivalent) — custom AdjEM computation required. (6) NIL and transfer portal are rapidly increasing parity. CRITICAL: train only on women’s data; do NOT use men’s data.
+Table of Contents
+1. Architecture & GitHub Actions Design
+Identical workflow structure to the NCAAM Oracle, adapted for women’s basketball data sources and season calendar.
+Workflows
+Workflow
+Schedule
+Purpose
+Daily Predictions
+Cron: 0 13 * * * (9 AM ET daily)
+Fetch WBB data, score yesterday, predict today, send Discord embed. Season gate: Nov–April.
+Weekly Recap
+Cron: 0 14 * * 1 (Monday 10 AM ET)
+Aggregate past 7 days. Weekly + season record. Week-by-week trend. Recap embed.
+March Madness
+Selection Monday + daily in tournament
+Bracket sim (10,000x). Per-round predictions. Advancement tracker.
+Preseason Setup
+workflow_dispatch / October
+Load prior-year data. Train model. Init DB. Send “online” embed.
+GITHUB ACTIONS COMPUTE BUDGET
+WBB has the same ~5,500 game schedule as men’s. Daily runs ~5–10 min, ~150-day season = ~750–1,500 min. Well within GitHub’s free 2,000 min/month. SQLite persists as workflow artifact between runs.
+2. Season Lifecycle Manager
+Phase
+Dates (Approximate)
+Behavior
+Dormant
+Mid-April through September
+Cron exits silently. No messages.
+Preseason Setup
+Early October
+Load prior-year data, train model, init DB.
+Early Season
+November – early December
+Teams < 5 games: prior-year bootstrap. Embeds labeled “EARLY SEASON.”
+Conference Play
+January – early March
+Full in-season data. Peak accuracy. Daily preds + Monday recaps.
+Conference Tournaments
+Early–mid March
+Enhanced alerts.
+NCAA Tournament
+Selection Monday – Championship
+Bracket sim mode. Per-round embeds.
+Season End
+Day after Championship
+Final season summary. Go dormant.
+3. Discord Embedded Message Design
+Daily Predictions Embed
+EMBED STRUCTURE
+Color: Teal sidebar (#00838F)
+Title: 🏀 NCAAW Oracle — [Date] Predictions
+Description: [N] D-I games today. [X] High Conviction, [Y] Strong.
+
+Field 1 (inline): 🏆 Season Record — [W]-[L] ([acc]%)
+Field 2 (inline): 🎯 High Conviction (74%+) — [W]-[L] ([acc]%)
+Field 3 (inline): 🎰 vs Vegas ATS — [W]-[L]
+
+Per HIGH-CONVICTION game (74%+):
+🟢 [Away] @ [Home] | Pick: [Team] ([prob]%) | Spread: [spread] | Edge: [edge]%
+
+Yesterday’s results: ✅/❌ per high-conviction pick
+
+Footer: NCAAW Oracle v4.1 | [EARLY SEASON if applicable]
+Weekly Recap Embed
+EMBED STRUCTURE
+Color: Green/Red based on week result
+Title: 📊 NCAAW Oracle — Week [N] Recap
+Fields: This Week, Season Record, High Conviction, Extreme Conviction (80%+), vs Vegas, Brier, Best/Worst picks, Week-by-week trend
+Footer: NCAAW Oracle v4.1
+NCAA Tournament Bracket Embed
+EMBED STRUCTURE
+Color: Gold (#FFD700)
+Title: 🏆 NCAAW Oracle — [Year] NCAA Tournament Bracket
+Note: Women’s tournament is 68 teams (expanded in 2022). Selection Monday (not Sunday).
+Fields per region: top seeds + advancement probs. Final Four + Championship odds. Cinderella watch.
+4. Running Season Accuracy Tracker
+Metric
+Description
+Shown In
+Season Record
+Total correct/total (e.g., 445-155, 74.2%)
+Every embed
+Daily Record
+Today’s/yesterday’s results
+Daily embeds
+Weekly Record
+This week’s aggregate
+Monday recap
+High-Conviction Record (74%+)
+Correct/total for 74%+ picks
+Every embed
+Extreme-Conviction (80%+)
+Correct/total for 80%+ picks
+Recaps
+vs Vegas ATS
+Against the spread
+Every embed
+Edge Picks Record
+8%+ edge games
+Recaps
+Season Brier
+Cumulative Brier score
+Recaps
+Tournament Record
+NCAA Tourney picks
+Tournament embeds
+Week-by-Week Trend
+Per-week accuracy
+Recaps + summary
+EXAMPLE (Mid-February)
+🏆 Season: 445-155 (74.2%)
+🎯 High Conviction (74%+): 178-34 (84.0%)
+🚀 Extreme (80%+): 112-15 (88.2%)
+🎰 ATS: 205-168 (55.0%)
+📉 Brier: 0.155
+Note: Higher baseline accuracy than men’s reflects greater talent concentration + more lopsided matchups.
+5. Prior-Year Bootstrap (Early Season)
+EARLY SEASON IN WBB
+Same challenge as men’s: sparse data early. For each team’s first 5 games, use prior-year adjusted efficiency + recruiting composite + returning minutes + portal WAR. Women’s basketball has historically higher roster continuity (fewer early WNBA departures), so returning minutes is weighted higher than in men’s.
+Preseason Rating (Women’s Calibration)
+Preseason_Rating = 0.35 × prior_AdjEM + 0.30 × returning_minutes_adj + 0.20 × recruiting_composite + 0.15 × portal_impact
+Higher weight on returning minutes (0.30 vs 0.25 for men’s) reflects greater roster continuity. Lower weight on recruiting (0.20 vs 0.25) because women’s recruiting rankings are less predictive.
+Blending Schedule
+Games Played
+Prior-Year Weight
+In-Season Weight
+Discord Label
+0–2 games
+80%
+20%
+🟡 EARLY SEASON
+3–5 games
+60%
+40%
+🟡 EARLY SEASON
+6–10 games
+40%
+60%
+🟠 Blending
+11–15 games
+25%
+75%
+(no label)
+16–20 games
+15%
+85%
+(no label)
+20+ / Tournament
+5–10%
+90–95%
+(no label)
+6. Feature Engineering (40–60 Features)
+Features marked (*) available from game 1 via bootstrap. All features use women’s-specific league averages for normalization.
+Feature
+Source
+Category
+elo_diff *
+Elo with offseason regression
+Team strength
+adj_em_diff *
+Custom AdjEM (Her Hoop Stats or built in-house)
+Team strength
+adj_oe_diff *
+Adjusted offensive efficiency
+Offense
+adj_de_diff *
+Adjusted defensive efficiency
+Defense
+adj_tempo_diff *
+Adjusted tempo (poss/40 min)
+Tempo
+efg_pct_diff
+Effective FG% (~44–46% WBB avg)
+Shooting
+tov_pct_diff
+Turnover % (~20–22% WBB avg)
+Ball security
+oreb_pct_diff
+Off. rebound rate (~30–33% WBB avg)
+Rebounding
+ft_rate_diff
+Free throw rate
+Offense
+three_pt_pct_diff
+3-point % (~30–32% WBB avg)
+Shooting
+two_pt_pct_diff
+2-point % / paint scoring
+Shooting
+block_pct_diff
+Block %
+Defense
+steal_pct_diff
+Steal %
+Defense
+pythagorean_diff *
+Pythagorean win%
+Team strength
+recruiting_composite_diff *
+Talent composite
+Talent
+returning_minutes_diff *
+% minutes returning
+Continuity
+portal_impact_diff *
+Portal WAR
+Roster
+star_player_impact_diff *
+Top player BPM/usage
+Star power
+experience_diff *
+Avg years (5th-year seniors)
+Experience
+sos_diff *
+Strength of schedule
+Context
+rest_days_diff
+Days since last game
+Fatigue
+is_home
+Home court (0/1)
+Venue
+is_neutral_site
+Neutral site (0/1)
+Venue
+conference_quality_diff *
+Conference median rating
+Context
+bench_depth_diff
+Bench contribution %
+Depth
+CRITICAL: Use women’s D-I averages for normalization (eFG% ~45%, TOV% ~21%, ORB% ~31%). Using men’s averages will systematically bias feature values.
+7. Custom Adjusted Efficiency Metrics
+NO KENPOM FOR WBB
+There is no direct KenPom equivalent for women’s basketball. Her Hoop Stats provides ratings but may not cover all 364 teams. V4.1 builds custom AdjOE/AdjDE/AdjEM using the same iterative opponent-adjustment methodology as KenPom, applied to women’s box score data from ESPN/NCAA. This runs during the daily workflow as teams accumulate games.
+Compute raw OE/DE (points per 100 possessions) for all 364 teams.
+Iterate opponent adjustments until convergence (~10 iterations).
+Result: AdjOE, AdjDE, AdjEM, AdjTempo calibrated to women’s game.
+Alternative: use Her Hoop Stats ratings where available, supplement with custom for remaining teams.
+Prior-year custom AdjEM stored in config/prior_year.json for bootstrap.
+8. Star Player Dominance Model
+MORE IMPACTFUL IN WBB
+Individual stars have larger impact in women’s basketball due to greater talent gaps, higher usage rates, and fewer possessions per game. A dominant player can shift win probability by 10–15%. The model explicitly tracks star availability and impact.
+Track top player BPM and usage rate for each team.
+If star (top BPM on team) is out: apply usage-weighted penalty to team AdjEM.
+Freshman phenoms: McDonald’s All-Americans can have immediate massive impact. Track incoming.
+WNBA draft impact: top players leaving early increasingly common. Subtract their WAR pre-season.
+NIL retention: some programs retain draft-eligible players via NIL. Track retention signals.
+9. Home Court & Venue Model
+Venue
+Adjustment
+Notes
+Home (Power conf)
++3.0 to +4.5 pts
+Growing HCA as attendance rises. SC, Iowa, LSU sell out.
+Home (Mid-major)
++2.5 to +3.5 pts
+Still meaningful.
+Neutral site
++0.5 to listed home
+Conf tournaments, early events.
+NCAA Tournament
++1.0 to higher seed/closer
+Proximity matters.
+Tempo: women’s range ~58–75 poss/game. Same weighted-average interaction model. Lower 3PT% means less shooting variance than men’s.
+10. Market Edge Detection
+LARGEST EDGE OPPORTUNITY IN COLLEGE SPORTS
+WBB betting lines are the least efficient of any major sport. Fewer bettors, less coverage, rapidly shifting rosters. Model edges are larger and more frequent than men’s CBB. Note: not all games have betting lines; focus on those that do.
+Edge Size
+Interpretation
+Discord Display
+< 4%
+Agreement
+Standard
+4–8%
+Small divergence
+Noted in condensed section
+8–12%
+Meaningful edge
+💡 Highlighted
+> 12%
+Large edge — 82–85%
+🚀 Priority, top of embed
+11. The Meta-Model: Logistic Regression
+P(home_win) = sigmoid(β0 + β1×elo_diff + β2×adj_em_diff + β3×star_player_diff + ...)
+Train on: 2018–2024 WBB data ONLY (~33,000 games). Do NOT train on men’s data.
+Walk-forward CV. L2 regularization (C=1.0).
+Export model_weights.json + calibration_map.json to /model/. Retrain annually.
+Simulate prior-year bootstrap in training data.
+12. Monte Carlo & Calibration
+exp_pts = team_AdjOE × (opp_AdjDE / D1_avg) × expected_poss / 100 × home_adj × rest_adj
+10,000 Normal sims. Women’s-specific σ ~11 points per team.
+OT: ~7 additional points per team.
+Platt scaling: isotonic regression. Especially important in WBB due to more lopsided games.
+13. Confidence Classification
+Probability
+Tier
+Discord
+Accuracy
+50–58%
+Coin Flip / Lean
+Not shown / condensed
+~54%
+58–65%
+Moderate
+Condensed list
+~62%
+65–74%
+Strong
+Individual field
+~70–74%
+74–80%
+High Conviction
+🟢 Highlighted, full details
+~78–82%
+80%+
+Extreme Conviction
+🚀 Top of embed
+~82–85%
+14. Elo, Data Sources & Schema
+new_season_elo = 0.50 × prior_final + 0.25 × recruiting_elo + 0.25 × D1_mean
+Source
+Data
+Cost
+Her Hoop Stats
+Adjusted efficiency, Four Factors, player stats for WBB
+Free / subscription
+NCAA / ESPN
+Schedule, scores, box scores, NET
+Free
+Sports Reference (WBB)
+Historical stats, game logs
+Free
+247Sports / ESPNW
+Recruiting, portal tracker
+Free
+Full Court Press
+WBB recruiting, portal, roster news
+Free
+Odds API
+Vegas lines (limited for WBB)
+Free tier
+DATA NOTE
+Women’s basketball has less publicly available advanced data. Her Hoop Stats is the closest KenPom equivalent. For custom AdjEM, build from box score data via ESPN/NCAA. Play-by-play less systematically available. The custom AdjEM computation in Section 7 is essential.
+15. Repository Structure
+Path
+Purpose
+/.github/workflows/daily-predictions.yml
+Daily predictions (9 AM ET)
+/.github/workflows/weekly-recap.yml
+Monday recap
+/.github/workflows/march-madness.yml
+Tournament bracket sim + per-round
+/.github/workflows/preseason-setup.yml
+October init
+/src/pipeline/
+Features, Monte Carlo, prediction runner
+/src/discord/
+Embed builder, webhook sender
+/src/season-manager/
+Date gate, March Madness mode
+/src/custom-adj-em/
+Iterative opponent-adjusted efficiency calculator (WBB-specific)
+/src/bracket-sim/
+10,000-bracket simulator
+/model/model_weights.json
+Logistic regression coefficients
+/model/calibration_map.json
+Platt scaling
+/config/season.json
+Season dates, venue HCA, team configs
+/config/prior_year.json
+Prior-year AdjEM for bootstrap
+/config/portal_impact.json
+Portal WAR estimates
+/data/oracle.sqlite
+Database (persisted as Actions artifact)
+16. Evaluation Metrics & Accuracy Targets
+Metric
+Target
+Brier Score
+< 0.160
+Log Loss
+< 0.520
+Accuracy (all games)
+> 72%
+Calibration
+Within 3% per bucket
+High-conviction (74%+)
+> 78%
+Extreme (80%+)
+> 82%
+ATS record
+> 53%
+Tournament
+> 73%
+Competitive (spread < 10)
+> 62%
+Higher targets than men’s reflect greater talent concentration. The real test is competitive-game accuracy (spread < 10).
+17. Implementation Phases
+Phase 1 — Core Engine + GitHub Actions (5–6 hours)
+Step
+Task
+1
+Init GitHub repo. TypeScript + Python. Folder structure.
+2
+WBB data fetcher: ESPN/NCAA + Her Hoop Stats. JSON cache + retry.
+3
+Feature engineering: 30+ features. Prior-year bootstrap. Custom AdjEM iterator (opponent adjustment).
+4
+Monte Carlo (10,000 Normal, WBB σ ~11). Season manager. daily-predictions.yml.
+5
+SQLite with season_accuracy + weekly_accuracy tables.
+Phase 2 — Discord Embeds + Recaps (3 hours)
+Step
+Task
+6
+Discord embed builder: daily (teal), recap (green/red), bracket (gold). Running accuracy in every embed.
+7
+Weekly recap workflow. Season summary embed. March Madness bracket embed (Selection Monday).
+8
+Preseason “online” embed.
+Phase 3 — ML Pipeline (5–6 hours)
+Step
+Task
+9
+Python: historical dataset 2018–2025 WBB ONLY via ESPN + Sports Reference. Simulate bootstrap.
+10
+Build custom AdjEM from historical box scores (iterative opponent adjustment).
+11
+Train logistic regression (L2, C=1.0). Walk-forward CV. Platt scaling. Export to /model/.
+12
+Edge detection. Preseason Setup workflow.
+Phase 4 — Advanced Features + Backtest (4–5 hours)
+Step
+Task
+13
+Custom AdjEM + Four Factors (WBB calibration). Star player dominance model. WNBA draft impact.
+14
+Recruiting, portal, returning minutes. NIL retention signals.
+15
+Home court, tempo interaction (WBB range), conference quality, parity trend tracking.
+16
+Full backtest with bootstrap sim. NCAA Tournament bracket sim. Track early vs late vs tourney accuracy.
+17
+README.md: setup, Discord webhook, GitHub secrets, season schedule.
+18. Claude Code Prompts
+Copy and paste these into Claude Code sequentially:
+Phase 1 — Core Engine + GitHub Actions
+PROMPT
+Read the NCAAW Oracle v4.1 project plan. Implement Phase 1. Init GitHub repo with TypeScript + Python. WBB data fetcher using ESPN/NCAA APIs + Her Hoop Stats with caching and retry. Feature engineering: 30+ features with women’s-specific normalization (eFG% avg ~45%, TOV% ~21%, ORB% ~31%). Build custom AdjEM using iterative opponent adjustment on women’s data. Prior-year bootstrap: first 5 games per team use prior-year AdjEM + recruiting + returning minutes + portal WAR. Blending: 80/20 at 0–2 games, shifting to 5/95 by tournament. Tempo interaction calibrated to WBB range (~58–75 poss). Monte Carlo: 10,000 Normal sims, σ ~11 points. Season manager: Nov–April gate. SQLite with season_accuracy. Create daily-predictions.yml (cron 0 13 * * *).
+Phase 2 — Discord Embeds + Recaps
+PROMPT
+Continue NCAAW Oracle. Phase 2. Discord embeds: daily predictions (teal #00838F), running season record + high-conviction (74%+) + ATS in every embed. EARLY SEASON label for < 5 games teams. Monday recap (green/red): week + season record, week-by-week trend, Brier. Selection Monday bracket embed (gold): 10,000 bracket sims, 68 teams, round-by-round probs. Season summary after Championship. Webhook URL from DISCORD_WEBHOOK_URL secret. Create weekly-recap.yml + march-madness.yml.
+Phase 3 — ML Pipeline
+PROMPT
+Continue NCAAW Oracle. Phase 3. Python: historical WBB dataset 2018–2025 from ESPN + Sports Reference. CRITICAL: use ONLY women’s data, not men’s. Build custom AdjEM from historical box scores. Simulate prior-year bootstrap in training data. Train logistic regression (L2, C=1.0) with walk-forward CV. Platt scaling. Export model_weights.json + calibration_map.json. Edge detection (expect larger edges than men’s due to less efficient market). Preseason Setup workflow (October).
+Phase 4 — Advanced Features
+PROMPT
+Continue NCAAW Oracle. Phase 4. Custom AdjEM + Four Factors calibrated to WBB averages. Star player dominance model: BPM, usage rate, injury impact, WNBA draft losses. Recruiting: talent composite, returning minutes (weighted higher than men’s), portal WAR, NIL retention. Per-team home court. Tempo interaction (WBB range). Conference quality + parity trend tracking. NCAA Tournament bracket sim (10,000x, 68 teams, Selection Monday). Full backtest with bootstrap sim. Track early season vs conference play vs tournament. README with setup, Discord config, GitHub secrets, season schedule.
+END OF PROJECT PLAN
+NCAAW Oracle v4.1 — April 2026 — GitHub Actions + Discord Embeds + Seasonal Scheduling

@@ -1,0 +1,15 @@
+{
+  "sport": "NCAAW",
+  "cv_accuracy_lr": 0.7801052969173634,
+  "feature_names": [
+    "elo_diff",
+    "is_neutral"
+  ],
+  "playoff_seasons": [
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+  ]
+}

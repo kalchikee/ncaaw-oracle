@@ -1,0 +1,36 @@
+{
+  "name": "ncaaw-oracle",
+  "version": "4.1.0",
+  "description": "NCAAW Oracle v4.1 - Women's Basketball ML prediction engine with GitHub Actions + Discord embeds",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "tsx src/index.ts",
+    "dev": "tsx src/index.ts",
+    "pipeline": "tsx src/pipeline.ts",
+    "predict": "tsx src/index.ts --alert morning",
+    "recap": "tsx src/index.ts --alert recap",
+    "weekly": "tsx src/index.ts --alert weekly",
+    "bracket": "tsx src/index.ts --alert bracket",
+    "preseason": "tsx src/index.ts --alert preseason",
+    "train": "python python/train_model.py",
+    "backtest": "python python/backtest.py",
+    "fetch-history": "python python/fetch_historical.py",
+    "clean": "rimraf dist cache/*.json"
+  },
+  "dependencies": {
+    "sql.js": "^1.12.0",
+    "dotenv": "^16.4.5",
+    "node-fetch": "^3.3.2",
+    "pino": "^8.19.0",
+    "pino-pretty": "^11.0.0"
+  },
+  "devDependencies": {
+    "@types/sql.js": "^1.4.9",
+    "@types/node": "^20.12.7",
+    "rimraf": "^5.0.5",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.5"
+  }
+}
