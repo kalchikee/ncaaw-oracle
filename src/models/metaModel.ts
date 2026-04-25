@@ -44,7 +44,46 @@ export function loadModel(): boolean {
   try {
     if (existsSync(WEIGHTS_PATH)) {
       _model = JSON.parse(readFileSync(WEIGHTS_PATH, 'utf8')) as ModelWeights;
-      logger.info({ version: _model.version, accuracy: _model.accuracy }, 'ML model loaded');
+
+      // ─── Sanity checks ─────────────────────────────────────────────────
+      // weights[] is positional and `numFeatures` is the source of truth.
+      // If the array length disagrees, the dot product would mis-pair
+      // coefficients with features — refuse to use the model.
+      const weightsLen = Array.isArray(_model.weights) ? _model.weights.length : -1;
+      if (weightsLen !== _model.numFeatures) {
+        logger.error(
+          { numFeatures: _model.numFeatures, weights: weightsLen },
+          'ML model load aborted: weights[] length disagrees with numFeatures — refusing to use the model.',
+        );
+        _model = null;
+        return false;
+      }
+
+      // All-zero / NaN check — strong signal of a JSON shape mismatch.
+      let nonZero = 0;
+      let hasNaN = false;
+      for (const v of _model.weights) {
+        if (typeof v !== 'number' || Number.isNaN(v)) { hasNaN = true; break; }
+        if (v !== 0) nonZero++;
+      }
+      if (hasNaN) {
+        logger.error({ features: weightsLen }, 'ML model has NaN/non-numeric weights — refusing to use the model.');
+        _model = null;
+        return false;
+      }
+      if (nonZero === 0) {
+        logger.error(
+          { features: weightsLen },
+          'ML model loaded but ALL weights are zero — JSON shape likely mismatched. Refusing to use the model.',
+        );
+        _model = null;
+        return false;
+      }
+
+      logger.info(
+        { version: _model.version, accuracy: _model.accuracy, features: weightsLen, nonZeroWeights: nonZero },
+        'ML model loaded',
+      );
     }
     if (existsSync(CALIBRATION_PATH)) {
       _calibration = JSON.parse(readFileSync(CALIBRATION_PATH, 'utf8')) as CalibrationMap;
