@@ -76,10 +76,9 @@ export async function runPipeline(options: PipelineOptions = {}): Promise<Predic
   // ── Fetch today's schedule ──────────────────────────────────────────────────
   const allGames = await fetchSchedule(gameDate);
   if (allGames.length === 0) {
-    logger.warn({ gameDate }, 'No games found for date');
-    if (options.alertMode === 'morning') {
-      await sendDailyPredictionsEmbed([], gameDate, yesterdayResults);
-    }
+    // No games today — skip the Discord post entirely. The user explicitly
+    // doesn't want a daily "no games" notification during the off-season.
+    logger.info({ gameDate }, 'No games scheduled today — skipping Discord notification');
     closeDb();
     return [];
   }
@@ -127,8 +126,12 @@ export async function runPipeline(options: PipelineOptions = {}): Promise<Predic
   }
 
   // ── Send Discord embed ──────────────────────────────────────────────────────
-  if (options.alertMode === 'morning') {
+  // Only post when there's something to show. Empty predictions on a day with
+  // games (e.g. no Top-25 matchups) shouldn't generate a notification.
+  if (options.alertMode === 'morning' && predictions.length > 0) {
     await sendDailyPredictionsEmbed(predictions, gameDate, yesterdayResults);
+  } else if (options.alertMode === 'morning') {
+    logger.info({ gameDate, scheduledGames: games.length }, 'No predictions to post — skipping Discord');
   }
 
   closeDb();
