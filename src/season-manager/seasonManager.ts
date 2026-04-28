@@ -2,6 +2,9 @@
 // Women's Basketball: Early November → NCAA Championship (early April)
 // Phases: Dormant | PreseasonSetup | EarlySeason | ConferencePlay | ConferenceTournaments | NCAATorunament | SeasonEnd
 
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { dirname, resolve } from 'path';
+
 export type SeasonPhase =
   | 'dormant'
   | 'preseason_setup'
@@ -96,10 +99,54 @@ export function isSelectionMonday(dateStr?: string): boolean {
   return date === SEASON_DATES.NCAA_SELECTION_MONDAY;
 }
 
-// Check if today is the day after championship (trigger final summary)
+// Check if today is the day after championship (trigger final summary).
+// Narrow window: only the SEASON_END date itself, not "anything after". A
+// previous version returned true for every date past championship, which
+// caused the season-summary embed to fire every single day during the
+// offseason. The post-summary "did we already send?" guard lives in
+// hasSentSeasonSummary() / markSeasonSummarySent() below.
 export function isSeasonEndDay(dateStr?: string): boolean {
   const date = dateStr ?? new Date().toISOString().split('T')[0];
-  return date >= SEASON_DATES.SEASON_END;
+  return date === SEASON_DATES.SEASON_END;
+}
+
+// ─── Season-summary idempotency ────────────────────────────────────────────────
+// Belt-and-suspenders alongside the narrow isSeasonEndDay window: even if
+// someone reruns the workflow on April 7 multiple times, we only post once.
+
+const STATE_FILE = resolve(process.cwd(), 'data', 'season-state.json');
+
+interface SeasonState {
+  seasonSummarySent?: Record<string, string>; // season → ISO timestamp
+}
+
+function readState(): SeasonState {
+  try {
+    if (!existsSync(STATE_FILE)) return {};
+    return JSON.parse(readFileSync(STATE_FILE, 'utf-8')) as SeasonState;
+  } catch {
+    return {};
+  }
+}
+
+function writeState(state: SeasonState): void {
+  try {
+    mkdirSync(dirname(STATE_FILE), { recursive: true });
+    writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
+  } catch {
+    // best-effort; not fatal
+  }
+}
+
+export function hasSentSeasonSummary(season: string): boolean {
+  const state = readState();
+  return Boolean(state.seasonSummarySent?.[season]);
+}
+
+export function markSeasonSummarySent(season: string): void {
+  const state = readState();
+  state.seasonSummarySent = { ...(state.seasonSummarySent ?? {}), [season]: new Date().toISOString() };
+  writeState(state);
 }
 
 // Get bootstrap blend weight based on games played

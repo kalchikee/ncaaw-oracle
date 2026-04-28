@@ -252,12 +252,9 @@ export async function sendWeeklyRecapEmbed(
   weekEnd: string
 ): Promise<boolean> {
   const seasonRecord = getSeasonRecord();
-  const recentPreds = getPredictionsByDate(weekEnd);
 
   // Compute this week's record
-  let weekTotal = 0, weekCorrect = 0, weekHCTotal = 0, weekHCCorrect = 0;
-  let weekExTotal = 0, weekExCorrect = 0, weekATSTotal = 0, weekATSCorrect = 0;
-  let weekBrierSum = 0;
+  let weekTotal = 0, weekCorrect = 0;
 
   for (const wr of seasonRecord.week_records) {
     if (wr.start_date === weekStart) {
@@ -265,6 +262,27 @@ export async function sendWeeklyRecapEmbed(
       weekCorrect = wr.correct;
       break;
     }
+  }
+
+  // Cross-check: count predictions in [weekStart, weekEnd] that have a result.
+  // The weekly_accuracy table may not be populated yet, but we still want to
+  // skip the embed if literally nothing happened this week.
+  let gradedThisWeek = 0;
+  const start = new Date(weekStart);
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    const dStr = d.toISOString().split('T')[0];
+    if (dStr > weekEnd) break;
+    const preds = getPredictionsByDate(dStr).filter(p => p.correct !== undefined);
+    gradedThisWeek += preds.length;
+  }
+
+  // Guard: skip empty recaps. The user explicitly doesn't want pings during
+  // weeks with no completed games (e.g. offseason Mondays).
+  if (weekTotal === 0 && gradedThisWeek === 0) {
+    logger.info({ weekStart, weekEnd }, 'no completed games this week — skipping Discord');
+    return false;
   }
 
   const weekAcc = weekTotal > 0 ? weekCorrect / weekTotal : 0;
@@ -478,14 +496,10 @@ export async function sendDailyRecapEmbed(dateStr: string): Promise<boolean> {
   const seasonRecord = getSeasonRecord();
 
   if (preds.length === 0) {
-    const embed: DiscordEmbed = {
-      title: `🏀 NCAAW Oracle — ${formatDate(dateStr)} Recap`,
-      description: `No results recorded yet for ${formatDate(dateStr)}. Results update after games complete.`,
-      color: COLORS.recap_neutral,
-      footer: { text: 'NCAAW Oracle v4.1' },
-      timestamp: new Date().toISOString(),
-    };
-    return sendWebhook({ embeds: [embed] });
+    // No graded predictions yet — stay silent rather than posting a stub
+    // "no results" embed. The user doesn't want empty-day pings.
+    logger.info({ dateStr }, 'no completed predictions today — skipping Discord');
+    return false;
   }
 
   const hcPreds = preds.filter(p => isHighConviction(p.calibrated_prob));

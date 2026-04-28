@@ -13,7 +13,7 @@ import 'dotenv/config';
 import { logger } from './logger.js';
 import { runPipeline } from './pipeline.js';
 import { initDb, closeDb, getSeasonRecord } from './db/database.js';
-import { getSeasonStatus, isSelectionMonday, isSeasonEndDay } from './season-manager/seasonManager.js';
+import { getSeasonStatus, isSelectionMonday, isSeasonEndDay, hasSentSeasonSummary, markSeasonSummarySent } from './season-manager/seasonManager.js';
 import { sendWeeklyRecapEmbed, sendSeasonSummaryEmbed, sendPreseasonEmbed, sendDailyRecapEmbed } from './discord/embedBuilder.js';
 import { runBracketSim } from './bracket-sim/bracketSimulator.js';
 import { sendBracketEmbed } from './discord/embedBuilder.js';
@@ -147,10 +147,26 @@ async function main(): Promise<void> {
   }
 
   // ── Season summary (day after championship) ───────────────────────────────────
+  // Fires only on the narrow SEASON_END date AND only once per season (idempotent).
+  // Previously this triggered every day after April 7 because isSeasonEndDay
+  // used >= and there was no idempotency tracker.
   if (isSeasonEndDay(today) && seasonStatus.phase === 'season_end') {
+    if (hasSentSeasonSummary(season)) {
+      logger.info({ season, today }, 'season summary already sent — skipping Discord');
+      return;
+    }
     await initDb();
     await sendSeasonSummaryEmbed(season);
+    markSeasonSummarySent(season);
     closeDb();
+    return;
+  }
+
+  // After the season-summary window has closed (post-SEASON_END), the daily
+  // workflow has nothing to do. Bail silently rather than falling through to
+  // the daily-predictions pipeline (which would query an empty schedule).
+  if (seasonStatus.phase === 'season_end') {
+    logger.info({ today, season }, 'season is over — skipping Discord');
     return;
   }
 
