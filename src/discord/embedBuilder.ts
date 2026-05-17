@@ -135,7 +135,20 @@ export async function sendDailyPredictionsEmbed(
   const exCount = extreme.length;
 
   // Season stats fields
-  const fields: DiscordField[] = [
+  const fields: DiscordField[] = [];
+
+  // ── Season hit-rate ─────────────────────────────────────────────────────
+  // Pulled from the same getSeasonRecord() source the recap uses, so morning
+  // + recap agree on the number. Hidden in offseason (total === 0).
+  if (seasonRecord.total > 0) {
+    fields.push({
+      name: '📊 Season Accuracy',
+      value: `**${pct(seasonRecord.correct / seasonRecord.total)}** · ${seasonRecord.correct}/${seasonRecord.total} predictions correct this season`,
+      inline: false,
+    });
+  }
+
+  fields.push(
     {
       name: '🏆 Season Record',
       value: acc(seasonRecord.correct, seasonRecord.total),
@@ -151,7 +164,7 @@ export async function sendDailyPredictionsEmbed(
       value: acc(seasonRecord.ats_correct, seasonRecord.ats_total),
       inline: true,
     },
-  ];
+  );
 
   // Yesterday's results (if provided)
   if (yesterdayResults && yesterdayResults.length > 0) {
